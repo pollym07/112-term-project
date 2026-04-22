@@ -163,6 +163,8 @@ def instructions_redrawAll(app):
     drawLabel('Press r to rotate selected piece', app.width / 2, 4 * app.height / 5, size = app.width/24)
 
 def instructions_onScreenStart(app):
+
+    
     pass
 def instructions_onMousePress(app, mouseX, mouseY):
     pass
