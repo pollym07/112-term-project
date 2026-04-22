@@ -151,7 +151,7 @@ def createPieces(app):
     #             piece.edges['right'] = value
     #             app.pieceList[row * app.cols + (col+1)].edges['left'] = -value
     
-    #         if row < app.rows - 1:
+    #         if row < app.rows - 1:12
     #             value = random.choice([-1,1])
     #             piece.edges['bottom'] = value
     #             app.pieceList[(row + 1) * app.cols + col].edges['top'] = -value
