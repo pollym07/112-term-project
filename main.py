@@ -2,6 +2,9 @@ from cmu_graphics import *
 import random
 import math
 import json
+from sliceImage import sliceImage
+from generateKnobs import generateKnobPieces, bakeKnobs, getImageAverage, bakeSilhouettes 
+FONT = 'Chalkduster'
 
 #create Piece class
 class Piece:
@@ -18,10 +21,52 @@ class Piece:
         self.col = col
         self.locked = False
         self.angle = angle
-        # self.dragging = False
         self.edges = {'top': 0, 'right': 0, 'bottom': 0, 'left': 0}
 
+class Button:
+    def __init__(self, cx, cy, width, height, text, color, textSize):
+        self.cx = cx
+        self.cy = cy
+        self.width = width
+        self.height = height
+        self.text = text
+        self.color = color
+        self.textSize = textSize
+
+    def contains(self, mouseX, mouseY):
+        return (self.cx - (self.width / 2) <= mouseX <= self.cx + (self.width/2) 
+                and self.cy - (self.height/2) <= mouseY <= self.cy + (self.height/2))
+
+    def draw(self):
+        #shadow
+        drawRect(self.cx + 6, self.cy + 6, self.width, self.height,
+             align='center', fill='black', opacity=50)
+        #drawRect
+        drawRect(self.cx, self.cy, self.width, self.height,
+                 align = 'center', fill = self.color, border = 'black', borderWidth = 2)
+        drawLabel(self.text, self.cx, self.cy, size = self.textSize,
+                  font = FONT, bold = True)
+                
+class Confetti:
+    def __init__(self, app):
+        self.colors = ['red', 'gold', 'forestGreen', 'dodgerBlue', 'hotPink', 'orange', 'cyan']
+        self.reset(app)
+    
+    def reset(self, app):
+        self.x = random.randint(0, app.width)
+        self.y = random.randint(-app.height + (app.height // 2), 0)  # start above screen
+        self.width = random.randint(6, 14)
+        self.height = random.randint(4, 10)
+        self.speed = random.uniform(1.5, 4.5)
+        self.drift = random.uniform(-1.2, 1.2)
+        self.angle = random.randint(0, 360)
+        self.spin = random.uniform(-6, 6)
+        self.color = random.choice(self.colors)
+
 def onAppStart(app):
+    app.title = 'SCRAMBLED!'
+    app.backgroundColor = 'darkSlateGray'
+    app.accentColor = 'gold'
     app.stepsPerSecond = 10
     app.height = 900
     app.width = 600
@@ -30,8 +75,61 @@ def onAppStart(app):
     app.boardWidth = min(app.width - (app.boardLeft * 2), app.height - (app.boardTop * 2))
     app.boardHeight = app.boardWidth
     app.draggingPiece = None
-    app.bestScores = []
-    start_onScreenStart(app)
+    app.bestScores = {'Easy': [], 'Medium': [], 'Hard': []}
+    app.confetti = [Confetti(app) for _ in range(60)]
+    createStartButtons(app)
+    createPlayAgain(app)
+    createWinButtons(app)
+    createBackButton(app)
+    createOwnImageButtons(app)
+    app.timer = 0
+    app.pieceList = []
+    app.rows, app.cols = 1, 1
+    app.offsetX, app.offsetY = 0, 0
+    app.numberOfPieces = 1
+    app.levelChosen = 'easy'
+    app.hints = 0
+    app.hintPiece = None
+    app.gameWon = False
+    app.winDelay = 0
+
+def createOwnImageButtons(app):
+    app.ownImageName = ''
+    app.ownImageStatus = ''
+    cx, cy = app.width//2, app.height // 2
+    w, h = app.width//4, app.height//14
+    app.ownImageButtons = [
+        Button(app.width//4, cy, w, h, 'Easy', 'forestGreen', 18),
+        Button(app.width//2, cy, w, h, 'Medium', 'gold', 18),
+        Button(3*app.width//4, cy, w, h, 'Hard', 'crimson', 18),
+    ]
+    app.goButton = Button(app.width//2, cy + h*2, app.width//3, h, 'Go!', 'hotPink', 22)
+
+
+def createStartButtons(app):
+    cx, cy = app.width//2, app.height/6
+    width, height = app.width // 2.5, app.height // 7
+    textSize = app.width / 12
+    app.startButtons = [Button(cx, 2*cy, width, height, 'Easy', 'forestGreen', textSize), 
+                        Button(cx, 3*cy, width, height, 'Medium', 'gold', textSize),
+                        Button(cx, 4*cy, width, height, 'Hard', 'crimson', textSize),
+                        Button(cx, 5*cy, width, height, 'Own Image', 'hotPink', app.width // 18),
+                        Button(cx, app.height - (app.height//28) - 10, app.width//5, app.height//14, 'Instructions', 'cyan', 15)]
+
+def drawBackground(app):
+    drawRect(0, 0, app.width, app.height, fill= app.backgroundColor)
+
+def createBackButton(app):
+    app.backButton = Button(app.width//2, app.height - app.height//10, app.width//3, app.height//14,'Back', 'crimson', app.width//22)
+
+def createPlayAgain(app):
+    app.playAgainButton = Button(app.width//2, app.height//2 + 160, (app.width//2), (app.height / 9), 'Play Again', 'forestGreen', 35)
+
+def createWinButtons(app):
+    cx, cy = app.width//2, app.height// 2 + 160
+    width, height = (app.width/2), app.height / 9
+    # textSize = 25
+    app.winButtons = [Button(cx, cy + 130, width, height, 'See Best Scores', 'gold', 32)] + [app.playAgainButton]
 
 def start_onScreenStart(app):
     app.timer = 0
@@ -46,24 +144,22 @@ def start_onScreenStart(app):
     app.winDelay = 0
 
 def start_onMousePress(app, mouseX, mouseY):
-    levelChosen = levelSelected(app, mouseX, mouseY)
-    if (app.width//2 - app.width//10 <= mouseX <= app.width//2 + app.width//10) and (app.height - 50 - app.height//28 <= mouseY <= app.height - 50 + app.height//28): 
-       setActiveScreen('instructions') 
-    if levelChosen == None:
-        return
-    if levelChosen == 'Easy': 
-        app.levelChosen = random.choice(['easy', 'easy2'])
-        app.numberOfPieces = 25
-    if levelChosen == 'Medium':
-        app.levelChosen = random.choice(['medium', 'medium2'])
-        app.numberOfPieces = 64
-    if levelChosen == 'Hard':
-        app.levelChosen = 'hard'
-        app.numberOfPieces = 100
-    if levelChosen != None:
-        app.rows = app.cols = int(math.sqrt(app.numberOfPieces))
-        createPieces(app)
-        setActiveScreen('game')
+    levelMap = {'Easy' : ((['easy', 'easy2']), 25), 
+                'Medium' : ((['medium', 'medium2']), 64),
+                'Hard' : ((['hard']), 100)}
+    for button in app.startButtons:
+        if button.contains(mouseX, mouseY):
+            if button.text == 'Instructions':
+                setActiveScreen('instructions')
+            if button.text == 'Own Image':
+                setActiveScreen('ownImage')
+            else:
+                levels, app.numberOfPieces = levelMap[button.text]
+                app.levelChosen = random.choice(levels)
+                app.rows = app.cols = int(math.sqrt(app.numberOfPieces))
+                createPieces(app)
+                setActiveScreen('game')
+                return
     #used AI to help come up with this idea rather than 
     #having an Easy, Medium, and Hard screen which would be so much code
 
@@ -75,46 +171,90 @@ def start_onMouseDrag(app, mouseX, mouseY):
 
 #create start screen, easy, medium, hard screens
 def start_redrawAll(app):
-    # come up with a creative name
-    drawRect(0,0,app.width, app.height, fill = 'pink', opacity = 80)
-    drawLabel('Welcome to the Jigsaw Jungle', app.width//2, 50, size = app.width//14, font = 'cursive', bold = True)
-    drawLabel('Select a Level', app.width // 2, 1.25*app.height/5, size = app.width//11, font = 'cursive')
-    drawRect(app.width//2, 2*app.height/5, app.width//2.5, app.height//7, align = 'center', fill = 'forestGreen')
-    drawRect(app.width//2, 3*app.height/5, app.width//2.5, app.height//7, align = 'center', fill = 'gold')
-    drawRect(app.width//2, 4*app.height/5, app.width//2.5, app.height//7, align = 'center', fill = 'crimson')
-    drawLabel('Easy', app.width//2, 2*app.height/5, size = app.width / 10, font = 'cursive')
-    drawLabel('Medium', app.width//2, 3*app.height/5, size = app.width / 10, font = 'cursive')
-    drawLabel('Hard', app.width//2, 4*app.height/5, size = app.width / 10, font = 'cursive')
-    drawRect(app.width//2, app.height - 50, app.width//5, app.height//14, align = 'center', fill = 'cyan')
-    drawLabel('Instructions', app.width//2, app.height - 50, size = 20, font = 'cursive')
+    drawBackground(app)
+    drawLabel(app.title, app.width//2, app.height/10, size = app.width//7, font = FONT, bold = True, fill = app.accentColor)
+    drawLabel('Choose your difficulty!', app.width // 2, app.height/10 + app.height//9, size = app.width//20, font = FONT, fill = 'white')
+    for button in app.startButtons:
+        button.draw()
 
-def levelSelected(app, mouseX, mouseY):
-    x0, x1 = app.width//2 - app.width//2.5, app.width//2 + app.width//2.5
-    if (x0 <= mouseX <= x1):
-        if (2*app.height/5 - app.height//7 <= mouseY <= 2*app.height/5 + app.height//7):
-            return 'Easy'
-        if (3*app.height/5 - app.height//7 <= mouseY <= 3*app.height/5 + app.height//7):
-            return 'Medium'
-        if (4*app.height/5 - app.height//7 <= mouseY <= 4*app.height/5 + app.height//7):
-            return 'Hard'
-    else:
-        return None
+def ownImage_onScreenStart(app):
+    app.ownImageName = ''
+    app.ownImageStatus = ''
+    app.ownImageDifficulty = 'own'
+    app.ownImageRows = 5
 
-def instructions_redrawAll(app):
-    drawLabel('Press s to shuffle nonplaced pieces', app.width / 2, app.height / 5, size = app.width/24)
-    drawLabel('Press h for a hint regarding currently selected piece', app.width / 2, 2 * app.height / 5, size = app.width/24)
-    drawLabel('Press c to automatically complete puzzle', app.width / 2, 3 * app.height / 5, size = app.width/24)
-    drawLabel('Press r to rotate selected piece', app.width / 2, 4 * app.height / 5, size = app.width/24)
+def ownImage_onMousePress(app, mouseX, mouseY):
+    if app.backButton.contains(mouseX, mouseY):
+        setActiveScreen('start')
+    for button in app.ownImageButtons:
+        if button.contains(mouseX, mouseY):
+            if button.text == 'Easy': app.ownImageRows = 5
+            elif button.text == 'Medium': app.ownImageRows = 8
+            elif button.text == 'Hard': app.ownImageRows = 10
+    if app.goButton.contains(mouseX, mouseY):
+        if app.ownImageName != '':
+            processOwnImage(app, app.ownImageName, app.ownImageRows)
+            app.ownImageStatus = 'Done! Starting game...'
+            app.levelChosen = app.ownImageDifficulty
+            app.numberOfPieces = app.ownImageRows ** 2
+            app.rows = app.cols = app.ownImageRows
+            createPieces(app)
+            setActiveScreen('game')
+
+def ownImage_onMouseDrag(app, mouseX, mouseY):
+    pass
+
+def ownImage_onKeyPress(app, key):
+    if key == 'backspace':
+        app.ownImageName = app.ownImageName[:-1]
+    elif key == 'space':
+        app.ownImageName += ' '
+    elif len(key) == 1:
+        app.ownImageName += key
+
+def ownImage_redrawAll(app):
+    drawBackground(app)
+    drawLabel('Own Image', app.width//2, app.height//10, size=app.width//9, font=FONT, bold=True, fill=app.accentColor)
+    drawRect(app.width//2, app.height//3, app.width*0.7, 50, align='center', fill='white', border='gold', borderWidth=2)
+    displayText = app.ownImageName if app.ownImageName != '' else 'Step 2: Type image filename...'
+    displayColor = 'black' if app.ownImageName else 'gray'
+    drawLabel('Step 1 : Place image in same folder as this code', app.width//2, app.height//4 + 30, size=15, font=FONT, fill='white')
+    drawLabel(displayText, app.width//2, app.height//3, size=18, font=FONT, fill=displayColor)
+    drawLabel('Step 3 : Select your difficulty', app.width//2, app.height// 2 - 50, size=15, font=FONT, fill='white')
+    # difficulty buttons
+    for button in app.ownImageButtons:
+        button.draw()
+    app.goButton.draw()
+    drawLabel(app.ownImageStatus, app.width//2, app.height*0.85, size=15, font=FONT, fill='gold')
+    app.backButton.draw()
 
 def instructions_onScreenStart(app):
     pass
 def instructions_onMousePress(app, mouseX, mouseY):
-    pass
+    if app.backButton.contains(mouseX, mouseY):
+        setActiveScreen('start')
+
 def instructions_onMouseRelease(app, mouseX, mouseY):
     pass
 def instructions_onMouseDrag(app, mouseX, mouseY):
     pass
 
+def instructions_redrawAll(app):
+    drawBackground(app)
+    drawLabel('How to Play', app.width / 2, app.height/ 10, size = app.width //9, font = FONT, bold = True, fill = app.accentColor)
+    guidance = [('S', 'Shuffle unplaced pieces'),
+                ('H', 'Hint for selected piece'),
+                ('R', 'Rotate selected piece'),
+                ('C', 'Auto-complete puzzle')]
+    for i in range(len(guidance)):
+        key, description = guidance[i]
+        y = app.height // 3.8 + i * (app.height // 6)
+        keyButton = Button(app.width // 6, y, app.width // 8, app.height // 12, key, app.accentColor, app.width//10)
+        keyButton.draw()
+        drawLabel(description, app.width//2.2 + app.width//8, y,
+              size=app.width//22, font=FONT, fill='white')
+    app.backButton.draw()
+        
 def game_onScreenStart(app):
     app.gameWon = False
     pass
@@ -151,10 +291,16 @@ def game_onMouseRelease(app, mouseX, mouseY):
         placePiece(app, currPiece)
         if currPiece.locked:
             app.hintPiece = None
-        if gameWon(app) and not app.gameWon:
-            app.gameWon = True
-            app.winDelay = app.stepsPerSecond * 2
-            app.bestScores.append(app.timer)
+        completeGameWin(app)
+
+def completeGameWin(app):
+    if gameWon(app) and not app.gameWon:
+        app.gameWon = True
+        app.winDelay = app.stepsPerSecond * 2
+        if app.numberOfPieces == 25: level = 'Easy'
+        elif app.numberOfPieces == 64: level = 'Medium'
+        else: level = 'Hard'
+        app.bestScores[level].append(app.timer)
 
 def game_onKeyPress(app, key):
     if key == 'c':
@@ -175,19 +321,23 @@ def game_onKeyPress(app, key):
         if app.draggingPiece != None:
             currPiece = app.pieceList[app.draggingPiece]
             currPiece.angle += 90
-    if gameWon(app) and not app.gameWon:
-        minutes, seconds = (app.timer//app.stepsPerSecond) // 60, (app.timer//app.stepsPerSecond) % 60
-        app.bestScores.append(f'{minutes}m, {seconds}s, Hints = {app.hints}')
-        app.gameWon = True
-        app.winDelay = app.stepsPerSecond * 2
+    completeGameWin(app)
 
 def game_redrawAll(app):
+    drawBackground(app)
     for piece in app.pieceList:
         drawPiece(app, piece)
     minutes, seconds = (app.timer//app.stepsPerSecond) // 60, (app.timer//app.stepsPerSecond) % 60
-    drawLabel(f'{minutes}m, {seconds}s', app.width//2, app.height//2, size = 20)
+    drawLabel(f'{minutes:02d}m, {seconds:02d}s', app.width//2, app.height//2 + app.boardHeight / (app.rows + 2), size = 20, font = FONT)
+    # if app.hintPiece != None:
+    #     r = app.hintPiece.width // 6
+    #     pieceImage = f'{app.levelChosen}/{app.levelChosen}_{app.hintPiece.row}_{app.hintPiece.col}.png'
+    #     drawImage(pieceImage, app.hintPiece.correctX - r, app.hintPiece.correctY - r,
+    #             width=app.hintPiece.width + r*2, height=app.hintPiece.height + r*2,
+    #             opacity=18)
+    # if i just want a gold dashed border... which one do we prefer?
     if app.hintPiece != None:
-        drawRect(app.hintPiece.correctX, app.hintPiece.correctY, app.hintPiece.width, app.hintPiece.height, fill = None, border = 'red')
+        drawRect(app.hintPiece.correctX, app.hintPiece.correctY, app.hintPiece.width, app.hintPiece.height, fill = None, border = app.accentColor, borderWidth = 3, dashes = True, opacity = 30)
     drawBoard(app)
     drawBoardBorder(app)
 
@@ -199,105 +349,114 @@ def drawBoard(app):
 def drawCell(app, row, col):
     cellLeft, cellTop = getCellLeftTop(app, row, col)
     cellWidth, cellHeight = getCellSize(app)
-    drawRect(cellLeft, cellTop, cellWidth, cellHeight, fill = None)#, border = 'black')
+    drawRect(cellLeft, cellTop, cellWidth, cellHeight, fill = None)
     
 def drawBoardBorder(app):
-    drawRect(app.boardLeft, app.boardTop, app.boardWidth, app.boardHeight, fill = None, border = 'black', borderWidth = 3)
+    drawRect(app.boardLeft, app.boardTop, app.boardWidth, app.boardHeight, fill = None, border = app.accentColor, borderWidth = 3)
     
 def drawPiece(app, piece):
     pieceImage = f'{app.levelChosen}/{app.levelChosen}_{piece.row}_{piece.col}.png'
+    highlight = f'{app.levelChosen}/{app.levelChosen}_{piece.row}_{piece.col}_highlighted.png'
     r = piece.width // 6
+    if app.draggingPiece!= None and app.pieceList[app.draggingPiece] == piece:
+        drawImage(highlight, piece.x-r+5, piece.y-r+5, width = piece.width + r*2, height = piece.height + r*2, rotateAngle = piece.angle) #, opacity = 100)
     drawImage(pieceImage, piece.x-r, piece.y-r, width = piece.width + r*2, height = piece.height + r*2, rotateAngle = piece.angle)
+
 
 def win_onScreenStart(app):
     pass
 
 def win_onStep(app):
-    pass
+    for confettiPiece in app.confetti:
+        confettiPiece.y += confettiPiece.speed
+        confettiPiece.x += confettiPiece.drift
+        confettiPiece.angle += confettiPiece.spin
+        if confettiPiece.y > app.height + 10:
+            confettiPiece.reset(app)
+            confettiPiece.y = random.randint(-25, 0)
 
 def win_onMousePress(app, mouseX, mouseY):
-    buttonX = app.width//2
-    buttonY = app.height//2 + 130
-    button2Y = buttonY + 70
-    buttonW = 200
-    buttonH = 50
-    # if play again is pressed)
-    inPlayAgainButton(app, mouseX, mouseY)
-    # if best scores is pressed
-    if (buttonX - buttonW/2 <= mouseX <= buttonX + buttonW/2) and (button2Y - buttonH/2 <= mouseY <= button2Y + buttonH/2):
-        setActiveScreen('bestScores')
+    for button in app.winButtons:
+        if button.contains(mouseX, mouseY):
+            if button.text == 'Play Again':
+                start_onScreenStart(app)
+                setActiveScreen('start')
+            elif button.text == 'See Best Scores':
+                setActiveScreen('bestScores')
+            return
 
 def win_redrawAll(app):
-    drawLabel('You Win!!', app.width // 2, app.height // 2, size = 50, bold = True, font = 'cursive')
-    drawLabel('Congratulations', app.width // 2, app.height // 2 - 60, size = 30, font = 'cursive')
-    # drawLabel(f'{(app.timer//app.stepsPerSecond)}s', app.width//2, app.height//2 + 60, size = 20, font = 'cursive')
+    drawBackground(app)
+    drawLabel(app.title, app.width//2, app.height/10, size=app.width//7, font=FONT, bold=True, fill=app.accentColor)
+    drawLabel('You Win!!', app.width // 2, app.height // 4, size = app.width / 8, bold = True, font = FONT, fill = app.accentColor)
     minutes, seconds = (app.timer//app.stepsPerSecond) // 60, (app.timer//app.stepsPerSecond) % 60
-    drawLabel(f'{minutes}m, {seconds}s', app.width//2, app.height//2 + 60, size = 20, font = 'cursive')
-    drawLabel(f'Hints used: {app.hints}', app.width // 2, app.height // 2 - 33, font = 'cursive')
-    drawPlayAgain(app)
-    buttonX = app.width//2
-    buttonY = app.height//2 + 130
-    buttonW = 200
-    buttonH = 50
-    button2Y = buttonY + 70
-    drawRect(buttonX, button2Y, buttonW, buttonH, align='center', fill='gold')
-    drawLabel('See Best Scores', buttonX, button2Y, size=25, font = 'cursive')
-
-def drawPlayAgain(app):
-    buttonX = app.width//2
-    buttonY = app.height//2 + 130
-    buttonW = 200
-    buttonH = 50
-    drawRect(buttonX, buttonY, buttonW, buttonH, align='center', fill='forestGreen')
-    drawLabel('Play Again', buttonX, buttonY, size=25, font = 'cursive')
-
-def inPlayAgainButton(app, mouseX, mouseY):
-    buttonX = app.width//2
-    buttonY = app.height//2 + 130
-    buttonW = 200
-    buttonH = 50
-    if (buttonX - buttonW/2 <= mouseX <= buttonX + buttonW/2) and (buttonY - buttonH/2 <= mouseY <= buttonY + buttonH/2):
-        start_onScreenStart(app)
-        setActiveScreen('start')
+    drawLabel(f'{minutes:02d}m, {seconds:02d}s', app.width//2, app.height//2 - 32, size = 30, font = FONT)
+    drawLabel(f'Hints used: {app.hints}', app.width // 2, app.height // 2, font = FONT, size = 30)
+    for button in app.winButtons:
+        button.draw()
+    for confettiPiece in app.confetti:
+        drawRect(confettiPiece.x, confettiPiece.y, confettiPiece.width, confettiPiece.height, fill=confettiPiece.color, rotateAngle=confettiPiece.angle)
 
 def bestScores_onScreenStart(app):
     pass
 
 def bestScores_onMousePress(app, mouseX, mouseY):
-    inPlayAgainButton(app, mouseX, mouseY)
+    if app.playAgainButton.contains(mouseX, mouseY):
+        start_onScreenStart(app)
+        setActiveScreen('start')
 
 def bestScores_onMouseRelease(app, mouseX, mouseY):
     pass
 
 def bestScores_redrawAll(app):
-    app.bestScores.sort
-    for i in range(len(app.bestScores)):
-        bestScore = app.bestScores[i]
-        drawLabel(bestScore, app.width/2, 20+20*i)
-    drawPlayAgain(app)
+    drawBackground(app)
+    drawLabel(app.title, app.width // 2, app.height / 10, size = app.width // 7, font = FONT, fill = app.accentColor)
+    drawColumns = [('Easy', 'forestGreen'),
+                   ('Medium', 'gold'),
+                   ('Hard', 'crimson')]
+    colX = [app.width // 6, app.width // 2, 5 * app.width // 6]
+    headerY = app.height // 5
+    for i in range(len(drawColumns)):
+        text, color = drawColumns[i]
+        key = text
+        x = colX[i]
+        drawLabel(text, x, headerY, size = app.width // 18, font=FONT, bold=True, fill=color)
+        scores = sorted(app.bestScores[key])
+        if scores == []:
+            drawLabel('No Scores Yet', x, headerY + app.height // 12, size=app.width // 28, font=FONT, fill='white')
+        else:
+            for j in range(len(scores[:5])):
+                score = scores[j]
+                y = headerY + app.height // 12 + j * (app.height // 11)
+                if j % 2 == 0:
+                    drawRect(x, y, app.width // 3 - 10, app.height // 12, align='center', fill='white', opacity=10)
+                minutes, seconds = (score // app.stepsPerSecond) // 60, (score // app.stepsPerSecond) % 60    
+                drawLabel(f'#{j+1}  {minutes:02d}m {seconds:02d}s', x, y, size=app.width // 26, font=FONT, fill='white')
+        app.playAgainButton.draw()
 
-# ai helped explain the jso to me, nothing else    
+    # app.bestScores.sort()
+    # for i in range(len(app.bestScores)):
+    #     y = app.height // 3 + i * (app.height//10)
+    #     if i % 2 == 0:
+    #         minutes, seconds = (app.timer//app.stepsPerSecond) // 60, (app.timer//app.stepsPerSecond) % 60
+    #         drawRect(app.width//2, y, app.width - 60, app.height//11, align='center', fill='white', opacity=10)
+    #     drawLabel(f'#{i+1}  {minutes:02d}m, {seconds:02d}s', app.width//2, y, size=app.width//22, font=FONT, fill='white')
+
+# ai helped explain the json to me, nothing else    
 def createPieces(app):
     with open(f'{app.levelChosen}_edges.json', 'r') as f:
         app.edges = json.load(f)
     width, height = getCellSize(app)
     app.pieceList = []
-    # need to create a grid at the bottom to place pieces, 
-    # for 
-    #     app.potentialStartPlaces = 
     for row in range(app.rows):
         for col in range(app.cols):
             correctX, correctY = getCellLeftTop(app, row, col)
             x = random.randint(0, int(app.width - width))
             y = random.randint(int(app.boardTop + app.boardHeight), int(app.height - height))
-            print(correctX, correctY)
             angle = random.choice([0, 90, 180, 270])
             piece = Piece(x, y, width, height, correctX, correctY, row, col, angle)
             piece.edges = app.edges[f'{row},{col}']
             app.pieceList.append(piece)
-            print("NEW GAME PIECES LOCKED STATES:")
-            for piece in app.pieceList:
-                print(piece.locked)
 
 def getCellSize(app):
     cellWidth = app.boardWidth / app.cols
@@ -319,13 +478,13 @@ def getPiece(app, row, col):
 def placePiece(app, piece):
     cellWidth, cellHeight = getCellSize(app)
     tolerance = cellWidth // 4
-    print(f'distance x: {abs(piece.x - piece.correctX)}, distance y: {abs(piece.y - piece.correctY)}, tolerance: {tolerance}')
     if abs(piece.x- piece.correctX) <= tolerance and abs(piece.y - piece.correctY) <= tolerance and piece.angle % 360 == 0:
         piece.x = piece.correctX
         piece.y = piece.correctY
+        # app.draggingPiece = None
         piece.locked = True
-    else:
-        piece.x, piece.y = piece.startX, piece.startY
+    # else:
+    #     piece.x, piece.y = piece.startX, piece.startY
         
 def inPiece(app, mouseX, mouseY):
     for i in range(len(app.pieceList)-1,-1,-1):
@@ -339,7 +498,6 @@ def gameWon(app):
     for piece in app.pieceList:
         if not piece.locked:
              return False
-    print(f'gameWon called, pieceList length: {len(app.pieceList)}, gameWon: {app.gameWon}')
     return True
 
 def handleWinDelay(app):

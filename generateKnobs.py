@@ -3,7 +3,6 @@ from PIL import Image, ImageDraw
 import random
 import json
 
-print('script started!')
 def generateKnobPieces(difficulty, rows, cols):
     edges = {}
     for row in range(rows):
@@ -90,3 +89,34 @@ bakeKnobs('easy2', 5, 5, generateKnobPieces('easy2', 5, 5))
 bakeKnobs('medium', 8, 8, generateKnobPieces('medium', 8, 8))
 bakeKnobs('medium2', 8, 8, generateKnobPieces('medium2', 8, 8))
 bakeKnobs('hard', 10, 10, generateKnobPieces('hard', 10, 10))
+
+def getImageAverage(difficulty, rows, cols):
+    all_pixels = []
+    for row in range(rows):
+        for col in range(cols):
+            piece = Image.open(f'{difficulty}/{difficulty}_{row}_{col}.png').convert('RGBA')
+            pixels = list(piece.getdata())
+            all_pixels += [(r, g, b) for r, g, b, a in pixels if a > 0]
+    avgR = sum(p[0] for p in all_pixels) // len(all_pixels)
+    avgG = sum(p[1] for p in all_pixels) // len(all_pixels)
+    avgB = sum(p[2] for p in all_pixels) // len(all_pixels)
+    return 255 - avgR, 255 - avgG, 255 - avgB
+
+def bakeSilhouettes(difficulty, rows, cols):
+    oppR, oppG, oppB = getImageAverage(difficulty, rows, cols)
+    for row in range(rows):
+        for col in range(cols):
+            piece = Image.open(f'{difficulty}/{difficulty}_{row}_{col}.png').convert('RGBA')
+            _, _, _, alpha = piece.split()
+            silhouette = Image.new('RGBA', piece.size, (0, 0, 0, 0))
+            fill = Image.new('RGBA', piece.size, (oppR, oppG, oppB, 255))
+            silhouette.paste(fill, mask=alpha)
+            silhouette.save(f'{difficulty}/{difficulty}_{row}_{col}_highlighted.png')
+    print(f'Done baking silhouettes for {difficulty}!')
+
+# run after bakeKnobs so the PNGs already exist
+bakeSilhouettes('easy', 5, 5)
+bakeSilhouettes('easy2', 5, 5)
+bakeSilhouettes('medium', 8, 8)
+bakeSilhouettes('medium2', 8, 8)
+bakeSilhouettes('hard', 10, 10)
