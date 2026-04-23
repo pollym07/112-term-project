@@ -20,8 +20,10 @@ def sliceImage(filename, difficulty, rows, cols):
             piece = img.crop((left, top, right, bottom))
             piece.save(f'{difficulty}/{difficulty}_{row}_{col}.png')
 
-sliceImage('jungle easy photo.jpg', 'easy', 5, 5)
-sliceImage('CMU.jpg', 'easy2', 5, 5)
-sliceImage('cmu letters logo.png', 'medium', 8, 8)
-sliceImage('CMU.jpg', 'medium2', 8, 8)
-sliceImage('venice bridge.jpg', 'hard', 10, 10)
+
+if __name__ == '__main__':
+    sliceImage('jungle easy photo.jpg', 'easy', 5, 5)
+    sliceImage('CMU.jpg', 'easy2', 5, 5)
+    sliceImage('cmu letters logo.png', 'medium', 8, 8)
+    sliceImage('CMU.jpg', 'medium2', 8, 8)
+    sliceImage('venice bridge.jpg', 'hard', 10, 10)

@@ -84,11 +84,12 @@ def bakeKnobs(difficulty, rows, cols, edges):
             canvas.save(f'{difficulty}/{difficulty}_{row}_{col}.png')
     print(f'Done baking knobs for {difficulty}!')
 
-bakeKnobs('easy', 5, 5, generateKnobPieces('easy', 5, 5))
-bakeKnobs('easy2', 5, 5, generateKnobPieces('easy2', 5, 5))
-bakeKnobs('medium', 8, 8, generateKnobPieces('medium', 8, 8))
-bakeKnobs('medium2', 8, 8, generateKnobPieces('medium2', 8, 8))
-bakeKnobs('hard', 10, 10, generateKnobPieces('hard', 10, 10))
+if __name__ == '__main__':
+    bakeKnobs('easy', 5, 5, generateKnobPieces('easy', 5, 5))
+    bakeKnobs('easy2', 5, 5, generateKnobPieces('easy2', 5, 5))
+    bakeKnobs('medium', 8, 8, generateKnobPieces('medium', 8, 8))
+    bakeKnobs('medium2', 8, 8, generateKnobPieces('medium2', 8, 8))
+    bakeKnobs('hard', 10, 10, generateKnobPieces('hard', 10, 10))
 
 def getImageAverage(difficulty, rows, cols):
     all_pixels = []
@@ -115,8 +116,9 @@ def bakeSilhouettes(difficulty, rows, cols):
     print(f'Done baking silhouettes for {difficulty}!')
 
 # run after bakeKnobs so the PNGs already exist
-bakeSilhouettes('easy', 5, 5)
-bakeSilhouettes('easy2', 5, 5)
-bakeSilhouettes('medium', 8, 8)
-bakeSilhouettes('medium2', 8, 8)
-bakeSilhouettes('hard', 10, 10)
+if __name__ == '__main__':
+    bakeSilhouettes('easy', 5, 5)
+    bakeSilhouettes('easy2', 5, 5)
+    bakeSilhouettes('medium', 8, 8)
+    bakeSilhouettes('medium2', 8, 8)
+    bakeSilhouettes('hard', 10, 10)

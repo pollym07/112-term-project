@@ -1,4 +1,6 @@
 from cmu_graphics import *
+from PIL import Image, ImageDraw
+import os
 import random
 import math
 import json
@@ -200,6 +202,28 @@ def ownImage_onMousePress(app, mouseX, mouseY):
             app.rows = app.cols = app.ownImageRows
             createPieces(app)
             setActiveScreen('game')
+
+def processOwnImage(app, filename, rows):
+    cols = rows
+    folderName = filename.split('.')[0]
+    app.ownImageDifficulty = folderName
+    os.makedirs(folderName, exist_ok=True)
+
+    img = Image.open(filename).convert('RGBA')
+    imgW, imgH = img.size
+    pieceW, pieceH = imgW // cols, imgH // rows
+    img = img.crop((0, 0, pieceW * cols, pieceH * rows))
+
+    for row in range(rows):
+        for col in range(cols):
+            left = col * pieceW
+            top = row * pieceH
+            piece = img.crop((left, top, left + pieceW, top + pieceH))
+            piece.save(f'{folderName}/{folderName}_{row}_{col}.png')
+
+    edges = generateKnobPieces(folderName, rows, cols)
+    bakeKnobs(folderName, rows, cols, edges)
+    bakeSilhouettes(folderName, rows, cols)
 
 def ownImage_onMouseDrag(app, mouseX, mouseY):
     pass
