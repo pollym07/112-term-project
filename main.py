@@ -120,6 +120,7 @@ def game_onScreenEnd(app):
     app.draggingPiece = None
 
 def game_onScreenStart(app):
+    app.gameWon = False
     pass
 
 # ai helped explain the jso to me, nothing else    
@@ -141,6 +142,9 @@ def createPieces(app):
             piece = Piece(x, y, width, height, correctX, correctY, row, col, angle)
             piece.edges = app.edges[f'{row},{col}']
             app.pieceList.append(piece)
+            print("NEW GAME PIECES LOCKED STATES:")
+            for piece in app.pieceList:
+                print(piece.locked)
     
     # #creating the knobs
     # for row in range(app.rows):
@@ -163,8 +167,6 @@ def instructions_redrawAll(app):
     drawLabel('Press r to rotate selected piece', app.width / 2, 4 * app.height / 5, size = app.width/24)
 
 def instructions_onScreenStart(app):
-
-    
     pass
 def instructions_onMousePress(app, mouseX, mouseY):
     pass
@@ -276,10 +278,10 @@ def game_onMouseRelease(app, mouseX, mouseY):
         placePiece(app, currPiece)
         if currPiece.locked:
             app.hintPiece = None
-    if gameWon(app) and not app.gameWon:
-        app.gameWon = True
-        app.winDelay = app.stepsPerSecond * 2
-        app.bestScores.append(app.timer)
+        if gameWon(app) and not app.gameWon:
+            app.gameWon = True
+            app.winDelay = app.stepsPerSecond * 2
+            app.bestScores.append(app.timer)
         
     
 def game_onMouseDrag(app, mouseX, mouseY):
@@ -309,9 +311,11 @@ def placePiece(app, piece):
         piece.x, piece.y = piece.startX, piece.startY
 
 def gameWon(app):
+    if app.pieceList == []: return False
     for piece in app.pieceList:
         if not piece.locked:
              return False
+    print(f'gameWon called, pieceList length: {len(app.pieceList)}, gameWon: {app.gameWon}')
     return True
 
 def win_onScreenStart(app):
@@ -323,10 +327,20 @@ def win_onMousePress(app, mouseX, mouseY):
     button2Y = buttonY + 70
     buttonW = 200
     buttonH = 50
-    if (buttonX - buttonW/2 <= mouseX <= buttonX + buttonW/2) and (buttonY - buttonH/2 <= mouseY <= buttonY + buttonH/2):
-        setActiveScreen('start')
+    # if play again is pressed)
+    inPlayAgainButton(app, mouseX, mouseY)
+    # if best scores is pressed
     if (buttonX - buttonW/2 <= mouseX <= buttonX + buttonW/2) and (button2Y - buttonH/2 <= mouseY <= button2Y + buttonH/2):
         setActiveScreen('bestScores')
+
+def inPlayAgainButton(app, mouseX, mouseY):
+    buttonX = app.width//2
+    buttonY = app.height//2 + 130
+    buttonW = 200
+    buttonH = 50
+    if (buttonX - buttonW/2 <= mouseX <= buttonX + buttonW/2) and (buttonY - buttonH/2 <= mouseY <= buttonY + buttonH/2):
+        start_onScreenStart(app)
+        setActiveScreen('start')
     
 def win_onStep(app):
     pass
@@ -334,17 +348,26 @@ def win_onStep(app):
 def win_redrawAll(app):
     drawLabel('You Win!!', app.width // 2, app.height // 2, size = 50, bold = True, font = 'cursive')
     drawLabel('Congratulations', app.width // 2, app.height // 2 - 60, size = 30, font = 'cursive')
-    drawLabel(f'{(app.timer//app.stepsPerSecond)}s', app.width//2, app.height//2 + 60, size = 20, font = 'cursive')
+    # drawLabel(f'{(app.timer//app.stepsPerSecond)}s', app.width//2, app.height//2 + 60, size = 20, font = 'cursive')
+    minutes, seconds = (app.timer//app.stepsPerSecond) // 60, (app.timer//app.stepsPerSecond) % 60
+    drawLabel(f'{minutes}m, {seconds}s', app.width//2, app.height//2 + 60, size = 20, font = 'cursive')
     drawLabel(f'Hints used: {app.hints}', app.width // 2, app.height // 2 - 33, font = 'cursive')
+    drawPlayAgain(app)
     buttonX = app.width//2
     buttonY = app.height//2 + 130
     buttonW = 200
     buttonH = 50
     button2Y = buttonY + 70
-    drawRect(buttonX, buttonY, buttonW, buttonH, align='center', fill='forestGreen')
-    drawLabel('Play Again', buttonX, buttonY, size=25, font = 'cursive')
     drawRect(buttonX, button2Y, buttonW, buttonH, align='center', fill='gold')
     drawLabel('See Best Scores', buttonX, button2Y, size=25, font = 'cursive')
+
+def drawPlayAgain(app):
+    buttonX = app.width//2
+    buttonY = app.height//2 + 130
+    buttonW = 200
+    buttonH = 50
+    drawRect(buttonX, buttonY, buttonW, buttonH, align='center', fill='forestGreen')
+    drawLabel('Play Again', buttonX, buttonY, size=25, font = 'cursive')
 
 def bestScores_onScreenStart(app):
     pass
@@ -354,9 +377,10 @@ def bestScores_redrawAll(app):
     for i in range(len(app.bestScores)):
         bestScore = app.bestScores[i]
         drawLabel(bestScore, app.width/2, 20+20*i)
+    drawPlayAgain(app)
 
 def bestScores_onMousePress(app, mouseX, mouseY):
-    pass
+    inPlayAgainButton(app, mouseX, mouseY)
 
 def bestScores_onMouseRelease(app, mouseX, mouseY):
     pass
