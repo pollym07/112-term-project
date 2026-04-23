@@ -203,6 +203,7 @@ def ownImage_onMousePress(app, mouseX, mouseY):
             createPieces(app)
             setActiveScreen('game')
 
+#ai guided, but not full ai written
 def processOwnImage(app, filename, rows):
     cols = rows
     folderName = filename.split('.')[0]
@@ -210,8 +211,18 @@ def processOwnImage(app, filename, rows):
     os.makedirs(folderName, exist_ok=True)
 
     img = Image.open(filename).convert('RGBA')
-    imgW, imgH = img.size
-    pieceW, pieceH = imgW // cols, imgH // rows
+    imgWidth, imgHeight = img.size
+    
+    size = min(imgWidth, imgHeight)
+    left = (imgWidth - size) // 2
+    top = (imgHeight - size) // 2
+    img = img.crop((left, top, left + size, top + size))
+
+    targetSize = app.boardWidth
+    img = img.resize((targetSize, targetSize), Image.LANCZOS)
+
+    pieceW = targetSize // cols
+    pieceH = targetSize // rows
     img = img.crop((0, 0, pieceW * cols, pieceH * rows))
 
     for row in range(rows):

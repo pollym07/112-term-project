@@ -41,43 +41,43 @@ def bakeKnobs(difficulty, rows, cols, edges):
             edge = edges[f'{row},{col}']
             canvas = Image.new('RGBA', (pieceW + r*2, pieceH + r*2), (0,0,0,0))
             canvas.paste(piece, (r, r))
-            
+
             if edge['top'] == 1 and row > 0:
                 above = pieces[f'{row-1},{col}']
                 knobImg = above.crop((pieceW//2 - r, pieceH - r, pieceW//2 + r, pieceH))
                 mask = Image.new('L', (r*2, r), 0)
                 ImageDraw.Draw(mask).ellipse((0, 0, r*2, r*2), fill=255)
-                canvas.paste(knobImg, (pieceW//2, r - r), mask)
-            
+                canvas.paste(knobImg, (r + pieceW//2 - r, 0), mask)  # y=0, x accounts for r offset
+
             if edge['bottom'] == 1 and row < rows - 1:
                 below = pieces[f'{row+1},{col}']
                 knobImg = below.crop((pieceW//2 - r, 0, pieceW//2 + r, r))
                 mask = Image.new('L', (r*2, r), 0)
                 ImageDraw.Draw(mask).ellipse((0, -r, r*2, r), fill=255)
-                canvas.paste(knobImg, (pieceW//2, pieceH + r), mask)
-            
+                canvas.paste(knobImg, (r + pieceW//2 - r, pieceH + r), mask)  # y = pieceH + r
+
             if edge['left'] == 1 and col > 0:
-                left = pieces[f'{row},{col-1}']
-                knobImg = left.crop((pieceW - r, pieceH//2 - r, pieceW, pieceH//2 + r))
+                left_piece = pieces[f'{row},{col-1}']
+                knobImg = left_piece.crop((pieceW - r, pieceH//2 - r, pieceW, pieceH//2 + r))
                 mask = Image.new('L', (r, r*2), 0)
                 ImageDraw.Draw(mask).ellipse((0, 0, r*2, r*2), fill=255)
-                canvas.paste(knobImg, (r - r, pieceH//2), mask)
-            
+                canvas.paste(knobImg, (0, r + pieceH//2 - r), mask)  # x=0, y accounts for r offset
+
             if edge['right'] == 1 and col < cols - 1:
-                right = pieces[f'{row},{col+1}']
-                knobImg = right.crop((0, pieceH//2 - r, r, pieceH//2 + r))
+                right_piece = pieces[f'{row},{col+1}']
+                knobImg = right_piece.crop((0, pieceH//2 - r, r, pieceH//2 + r))
                 mask = Image.new('L', (r, r*2), 0)
                 ImageDraw.Draw(mask).ellipse((-r, 0, r, r*2), fill=255)
-                canvas.paste(knobImg, (pieceW + r, pieceH//2), mask)
+                canvas.paste(knobImg, (pieceW + r, r + pieceH//2 - r), mask)  # x = pieceW + r
 
             # cut out holes for inward knobs (-1)
             draw = ImageDraw.Draw(canvas)
             if edge['top'] == -1:
-                draw.ellipse((r + pieceW//2 - r, r - r, r + pieceW//2 + r, r + r), fill=(0,0,0,0))
+                draw.ellipse((r + pieceW//2 - r, 0, r + pieceW//2 + r, r*2), fill=(0,0,0,0))
             if edge['bottom'] == -1:
                 draw.ellipse((r + pieceW//2 - r, pieceH, r + pieceW//2 + r, pieceH + r*2), fill=(0,0,0,0))
             if edge['left'] == -1:
-                draw.ellipse((r - r, r + pieceH//2 - r, r + r, r + pieceH//2 + r), fill=(0,0,0,0))
+                draw.ellipse((0, r + pieceH//2 - r, r*2, r + pieceH//2 + r), fill=(0,0,0,0))
             if edge['right'] == -1:
                 draw.ellipse((pieceW, r + pieceH//2 - r, pieceW + r*2, r + pieceH//2 + r), fill=(0,0,0,0))
             

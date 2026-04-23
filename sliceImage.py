@@ -5,6 +5,8 @@ import os
 def sliceImage(filename, difficulty, rows, cols):
     img = Image.open(filename)
     imgWidth, imgHeight = img.size
+    if imgWidth < imgHeight:
+        img = img.rotate(90, expand=True)
     pieceWidth = imgWidth // cols
     pieceHeight = imgHeight // rows
     
