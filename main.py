@@ -77,7 +77,7 @@ def onAppStart(app):
     app.boardWidth = min(app.width - (app.boardLeft * 2), app.height - (app.boardTop * 2))
     app.boardHeight = app.boardWidth
     app.draggingPiece = None
-    app.bestScores = {'Easy': [], 'Medium': [], 'Hard': []}
+    app.bestScores = {'Easy': [], 'Medium': [], 'Hard': [], 'Own Image': []}
     app.confetti = [Confetti(app) for _ in range(60)]
     createStartButtons(app)
     createPlayAgain(app)
@@ -153,7 +153,7 @@ def start_onMousePress(app, mouseX, mouseY):
         if button.contains(mouseX, mouseY):
             if button.text == 'Instructions':
                 setActiveScreen('instructions')
-            if button.text == 'Own Image':
+            elif button.text == 'Own Image':
                 setActiveScreen('ownImage')
             else:
                 levels, app.numberOfPieces = levelMap[button.text]
@@ -276,14 +276,16 @@ def instructions_onMouseDrag(app, mouseX, mouseY):
 
 def instructions_redrawAll(app):
     drawBackground(app)
-    drawLabel('How to Play', app.width / 2, app.height/ 10, size = app.width //9, font = FONT, bold = True, fill = app.accentColor)
+    drawLabel('How to Play', app.width / 2, app.height/ 10 - 25, size = app.width //9, font = FONT, bold = True, fill = app.accentColor)
+    drawLabel('Drag and Drop Pieces or Press Keys:', app.width / 2, app.height/ 10 + 42, size = app.width //27, font = FONT, bold = True, fill = app.accentColor)
     guidance = [('S', 'Shuffle unplaced pieces'),
                 ('H', 'Hint for selected piece'),
                 ('R', 'Rotate selected piece'),
+                ('P', 'Place selected piece'),
                 ('C', 'Auto-complete puzzle')]
     for i in range(len(guidance)):
         key, description = guidance[i]
-        y = app.height // 3.8 + i * (app.height // 6)
+        y = app.height // 4.5 + i * (app.height // 7)
         keyButton = Button(app.width // 6, y, app.width // 8, app.height // 12, key, app.accentColor, app.width//10)
         keyButton.draw()
         drawLabel(description, app.width//2.2 + app.width//8, y,
@@ -347,6 +349,12 @@ def game_onKeyPress(app, key):
         if app.draggingPiece != None:
             app.hintPiece = app.pieceList[app.draggingPiece]
             app.hints += 1
+    if key == 'p':
+        if app.draggingPiece != None:
+            piece = app.pieceList[app.draggingPiece]
+            piece.x, piece.y = piece.correctX, piece.correctY
+            piece.angle = 0
+            piece.locked = True
     if key == 's':
         for piece in app.pieceList:
             if not piece.locked:
@@ -448,34 +456,27 @@ def bestScores_redrawAll(app):
     drawLabel(app.title, app.width // 2, app.height / 10, size = app.width // 7, font = FONT, fill = app.accentColor)
     drawColumns = [('Easy', 'forestGreen'),
                    ('Medium', 'gold'),
-                   ('Hard', 'crimson')]
-    colX = [app.width // 6, app.width // 2, 5 * app.width // 6]
+                   ('Hard', 'crimson'),
+                   ('Own Image', 'hotPink')]
+    colX = [app.width // 9, 3.2*app.width // 9, 5.4*app.width // 9, 7.8*app.width // 9]
     headerY = app.height // 5
     for i in range(len(drawColumns)):
         text, color = drawColumns[i]
         key = text
         x = colX[i]
-        drawLabel(text, x, headerY, size = app.width // 18, font=FONT, bold=True, fill=color)
+        drawLabel(text, x, headerY, size = app.width // 25, font=FONT, bold=True, fill=color)
         scores = sorted(app.bestScores[key])
         if scores == []:
-            drawLabel('No Scores Yet', x, headerY + app.height // 12, size=app.width // 28, font=FONT, fill='white')
+            drawLabel('No Scores Yet', x, headerY + app.height // 12, size=app.width // 40, font=FONT, fill='white')
         else:
             for j in range(len(scores[:5])):
                 score = scores[j]
                 y = headerY + app.height // 12 + j * (app.height // 11)
-                if j % 2 == 0:
-                    drawRect(x, y, app.width // 3 - 10, app.height // 12, align='center', fill='white', opacity=10)
+                if j == 0:
+                    drawRect(x, y, app.width // 5, app.height // 12, align='center', fill='white', opacity=10)
                 minutes, seconds = (score // app.stepsPerSecond) // 60, (score // app.stepsPerSecond) % 60    
-                drawLabel(f'#{j+1}  {minutes:02d}m {seconds:02d}s', x, y, size=app.width // 26, font=FONT, fill='white')
+                drawLabel(f'#{j+1}  {minutes:02d}m {seconds:02d}s', x, y, size=app.width // 40, font=FONT, fill='white')
         app.playAgainButton.draw()
-
-    # app.bestScores.sort()
-    # for i in range(len(app.bestScores)):
-    #     y = app.height // 3 + i * (app.height//10)
-    #     if i % 2 == 0:
-    #         minutes, seconds = (app.timer//app.stepsPerSecond) // 60, (app.timer//app.stepsPerSecond) % 60
-    #         drawRect(app.width//2, y, app.width - 60, app.height//11, align='center', fill='white', opacity=10)
-    #     drawLabel(f'#{i+1}  {minutes:02d}m, {seconds:02d}s', app.width//2, y, size=app.width//22, font=FONT, fill='white')
 
 # ai helped explain the json to me, nothing else    
 def createPieces(app):
@@ -533,7 +534,9 @@ def gameWon(app):
     for piece in app.pieceList:
         if not piece.locked:
              return False
-    return True
+        else:
+            app.draggingPiece = None
+            return True
 
 def handleWinDelay(app):
     app.winDelay -= 1
