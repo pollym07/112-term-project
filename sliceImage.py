@@ -1,32 +1,28 @@
 from PIL import Image
 import os
 
-# ai wrote
-def sliceImage(filename, difficulty, rows, cols):
-    img = Image.open(filename).convert('RGBA')
-    imgWidth, imgHeight = img.size
+#had ai write at first. then totally erased, had AI give me a brief,
+#broad overview of what it wrote and went back in and rewrote myself
 
-    size = min(imgWidth, imgHeight)
-    left = (imgWidth - size) // 2
-    top = (imgHeight - size) // 2
-    img = img.crop((left, top, left + size, top + size))
-    
-    pieceWidth = size // cols
-    pieceHeight = size // rows
-    img = img.crop((0, 0, pieceWidth * cols, pieceHeight * rows))
-    
+def sliceImage(filename, difficulty, rows, cols):
+    image = Image.open(filename)
+    imageWidth, imageHeight = image.size
+    smallerSize = min(imageWidth, imageHeight)
+    left = (imageWidth - smallerSize) // 2
+    top = (imageHeight - smallerSize) // 2
+    image = image.crop((left, top, left + smallerSize, top + smallerSize))
+
+    pieceWidth, pieceHeight = smallerSize // cols, smallerSize // rows
+    image = image.crop((0, 0, pieceWidth * cols, pieceHeight * cols))
+
     if not os.path.exists(difficulty):
         os.makedirs(difficulty)
-    
+
     for row in range(rows):
         for col in range(cols):
-            left = col * pieceWidth
-            top = row * pieceHeight
-            right = left + pieceWidth
-            bottom = top + pieceHeight
-            piece = img.crop((left, top, right, bottom))
+            left, top = pieceWidth * col, pieceHeight * row
+            piece = image.crop((left, top, left + pieceWidth, top + pieceHeight))
             piece.save(f'{difficulty}/{difficulty}_{row}_{col}.png')
-
 
 if __name__ == '__main__':
     sliceImage('jungle easy photo.jpg', 'easy', 5, 5)

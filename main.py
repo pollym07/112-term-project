@@ -8,6 +8,14 @@ from sliceImage import sliceImage
 from generateKnobs import generateKnobPieces, bakeKnobs, getImageAverage, bakeSilhouettes 
 FONT = 'Chalkduster'
 
+'''
+Own image upload (place image in same folder as code), 
+piece rotation, drag and drop with tolerance, 
+highlight selected piece, hints, shuffle, auto-place piece,
+auto-complete puzzle, win screen with animated confetti,
+best scores tracker for all difficulties, timer
+'''
+
 #create Piece class
 class Piece:
     def __init__(self, x, y, width, height, correctX, correctY, row, col, angle):
@@ -151,15 +159,12 @@ def start_onMousePress(app, mouseX, mouseY):
     levelMap = {'Easy' : ((['easy', 'easy2']), 25), 
                 'Medium' : ((['medium2']), 64),
                 'Hard' : ((['hard']), 100)}
-    print("CLICK:", mouseX, mouseY)
     for button in app.startButtons:
-        print(button.text, button.contains(mouseX, mouseY))
         if button.contains(mouseX, mouseY):
             if button.text == 'Instructions':
                 setActiveScreen('instructions')
                 return
             elif button.text == 'Own Image':
-                print("Attempting switch...")
                 ownImage_onScreenStart(app)
                 setActiveScreen('ownImage')
                 return
@@ -208,35 +213,13 @@ def ownImage_onMousePress(app, mouseX, mouseY):
             createPieces(app)
             setActiveScreen('game')
 
-#ai guided, but not full ai written
+#just had ai tell me what function to write
 def processOwnImage(app, filename, rows):
     cols = rows
-    folderName = filename.split('.')[0]
+    difficultyLabel = {5: 'easy', 8: 'medium', 10:'hard'}[rows]
+    folderName = f"{difficultyLabel}_{filename.split('.')[0]}"
     app.ownImageDifficulty = folderName
-    os.makedirs(folderName, exist_ok=True)
-
-    img = Image.open(filename).convert('RGBA')
-    imgWidth, imgHeight = img.size
-    
-    size = min(imgWidth, imgHeight)
-    left = (imgWidth - size) // 2
-    top = (imgHeight - size) // 2
-    img = img.crop((left, top, left + size, top + size))
-
-    targetSize = app.boardWidth
-    img = img.resize((targetSize, targetSize), Image.LANCZOS)
-
-    pieceW = targetSize // cols
-    pieceH = targetSize // rows
-    img = img.crop((0, 0, pieceW * cols, pieceH * rows))
-
-    for row in range(rows):
-        for col in range(cols):
-            left = col * pieceW
-            top = row * pieceH
-            piece = img.crop((left, top, left + pieceW, top + pieceH))
-            piece.save(f'{folderName}/{folderName}_{row}_{col}.png')
-
+    sliceImage(app.ownImageName, folderName, rows, cols)
     edges = generateKnobPieces(folderName, rows, cols)
     bakeKnobs(folderName, rows, cols, edges)
     bakeSilhouettes(folderName, rows, cols)

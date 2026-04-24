@@ -1,4 +1,4 @@
-# ai generated
+# excluded code, ai generated
 from PIL import Image, ImageDraw
 import random
 import json
