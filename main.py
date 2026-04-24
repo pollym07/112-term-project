@@ -102,6 +102,7 @@ def onAppStart(app):
     app.hintPiece = None
     app.gameWon = False
     app.winDelay = 0
+    app.ownImage = False
 
 def createOwnImageButtons(app):
     app.ownImageName = ''
@@ -154,6 +155,7 @@ def start_onScreenStart(app):
     app.hintPiece = None
     app.gameWon = False
     app.winDelay = 0
+    app.ownImage = False
 
 def start_onMousePress(app, mouseX, mouseY):
     levelMap = {'Easy' : ((['easy', 'easy2']), 25), 
@@ -205,13 +207,17 @@ def ownImage_onMousePress(app, mouseX, mouseY):
             elif button.text == 'Hard': app.ownImageRows = 10
     if app.goButton.contains(mouseX, mouseY):
         if app.ownImageName != '':
-            processOwnImage(app, app.ownImageName, app.ownImageRows)
-            app.ownImageStatus = 'Done! Starting game...'
-            app.levelChosen = app.ownImageDifficulty
-            app.numberOfPieces = app.ownImageRows ** 2
-            app.rows = app.cols = app.ownImageRows
-            createPieces(app)
-            setActiveScreen('game')
+            if not os.path.exists(app.ownImageName):
+                app.ownImageStatus = 'File not found! Check the filename and try again.'
+            else:
+                processOwnImage(app, app.ownImageName, app.ownImageRows)
+                app.ownImage = True
+                app.ownImageStatus = 'Done! Starting game...'
+                app.levelChosen = app.ownImageDifficulty
+                app.numberOfPieces = app.ownImageRows ** 2
+                app.rows = app.cols = app.ownImageRows
+                createPieces(app)
+                setActiveScreen('game')
 
 #just had ai tell me what function to write
 def processOwnImage(app, filename, rows):
@@ -328,7 +334,7 @@ def completeGameWin(app):
         if app.numberOfPieces == 25: level = 'Easy'
         elif app.numberOfPieces == 64: level = 'Medium'
         else: level = 'Hard'
-        app.bestScores[level].append(app.timer)
+        app.bestScores[level].append((app.timer, app.ownImage))
 
 def game_onKeyPress(app, key):
     if key == 'c':
@@ -447,9 +453,8 @@ def bestScores_redrawAll(app):
     drawLabel(app.title, app.width // 2, app.height / 10, size = app.width // 7, font = FONT, fill = app.accentColor)
     drawColumns = [('Easy', 'forestGreen'),
                    ('Medium', 'gold'),
-                   ('Hard', 'crimson'),
-                   ('Own Image', 'hotPink')]
-    colX = [app.width // 9, 3.2*app.width // 9, 5.4*app.width // 9, 7.8*app.width // 9]
+                   ('Hard', 'crimson')]
+    colX = [app.width // 4, app.width // 2, 3*app.width//4]
     headerY = app.height // 5
     for i in range(len(drawColumns)):
         text, color = drawColumns[i]
@@ -463,9 +468,12 @@ def bestScores_redrawAll(app):
             for j in range(len(scores[:5])):
                 score = scores[j]
                 y = headerY + app.height // 12 + j * (app.height // 11)
-                if j == 0:
+                if j == 0 and not scores[j][1]:
                     drawRect(x, y, app.width // 5, app.height // 12, align='center', fill='white', opacity=10)
-                minutes, seconds = (score // app.stepsPerSecond) // 60, (score // app.stepsPerSecond) % 60    
+                if scores[j][1]:
+                    drawRect(x, y, app.width // 5, app.height // 12, align='center', fill='hotPink', opacity=29)
+                    drawLabel('★ Pink = Own Image', app.width // 2, app.height - app.height // 10, size=14, font=FONT, fill='hotPink')
+                minutes, seconds = (score[0] // app.stepsPerSecond) // 60, (score[0] // app.stepsPerSecond) % 60    
                 drawLabel(f'#{j+1}  {minutes:02d}m {seconds:02d}s', x, y, size=app.width // 40, font=FONT, fill='white')
         app.playAgainButton.draw()
 
