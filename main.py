@@ -10,10 +10,13 @@ FONT = 'Chalkduster'
 
 '''
 Own image upload (place image in same folder as code), 
-piece rotation, drag and drop with tolerance, 
-highlight selected piece, hints, shuffle, auto-place piece,
-auto-complete puzzle, win screen with animated confetti,
-best scores tracker for all difficulties, timer
+pieces with actual knobs, piece rotation, 
+drag and drop with tolerance, 
+highlight/ shadow selected piece (shadow is opposite of average pixel color), 
+hints, shuffle, auto-place piece, 
+auto-complete puzzle, 
+win screen with animated confetti, timer,
+best scores tracker for all difficulties
 '''
 
 #create Piece class
