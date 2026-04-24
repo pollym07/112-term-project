@@ -365,6 +365,7 @@ def game_onKeyPress(app, key):
         if app.draggingPiece != None:
             currPiece = app.pieceList[app.draggingPiece]
             currPiece.angle += 90
+            placePiece(app, currPiece)
     completeGameWin(app)
 
 def game_redrawAll(app):
@@ -519,8 +520,9 @@ def placePiece(app, piece):
     if abs(piece.x- piece.correctX) <= tolerance and abs(piece.y - piece.correctY) <= tolerance and piece.angle % 360 == 0:
         piece.x = piece.correctX
         piece.y = piece.correctY
-        # app.draggingPiece = None
+        app.draggingPiece = None
         piece.locked = True
+        app.hintPiece = None
     # else:
     #     piece.x, piece.y = piece.startX, piece.startY
         
