@@ -98,6 +98,8 @@ def onAppStart(app):
 def createOwnImageButtons(app):
     app.ownImageName = ''
     app.ownImageStatus = ''
+    app.ownImageDifficulty = 'own'
+    app.ownImageRows = 5
     cx, cy = app.width//2, app.height // 2
     w, h = app.width//4, app.height//14
     app.ownImageButtons = [
@@ -147,14 +149,20 @@ def start_onScreenStart(app):
 
 def start_onMousePress(app, mouseX, mouseY):
     levelMap = {'Easy' : ((['easy', 'easy2']), 25), 
-                'Medium' : ((['medium', 'medium2']), 64),
+                'Medium' : ((['medium2']), 64),
                 'Hard' : ((['hard']), 100)}
+    print("CLICK:", mouseX, mouseY)
     for button in app.startButtons:
+        print(button.text, button.contains(mouseX, mouseY))
         if button.contains(mouseX, mouseY):
             if button.text == 'Instructions':
                 setActiveScreen('instructions')
+                return
             elif button.text == 'Own Image':
+                print("Attempting switch...")
+                ownImage_onScreenStart(app)
                 setActiveScreen('ownImage')
+                return
             else:
                 levels, app.numberOfPieces = levelMap[button.text]
                 app.levelChosen = random.choice(levels)
@@ -180,10 +188,7 @@ def start_redrawAll(app):
         button.draw()
 
 def ownImage_onScreenStart(app):
-    app.ownImageName = ''
-    app.ownImageStatus = ''
-    app.ownImageDifficulty = 'own'
-    app.ownImageRows = 5
+    pass
 
 def ownImage_onMousePress(app, mouseX, mouseY):
     if app.backButton.contains(mouseX, mouseY):
@@ -237,6 +242,9 @@ def processOwnImage(app, filename, rows):
     bakeSilhouettes(folderName, rows, cols)
 
 def ownImage_onMouseDrag(app, mouseX, mouseY):
+    pass
+
+def ownImage_onKeyHold(app, mouseX, mouseY):
     pass
 
 def ownImage_onKeyPress(app, key):
@@ -354,6 +362,7 @@ def game_onKeyPress(app, key):
             piece = app.pieceList[app.draggingPiece]
             piece.x, piece.y = piece.correctX, piece.correctY
             piece.angle = 0
+            app.hintPiece = None
             piece.locked = True
     if key == 's':
         for piece in app.pieceList:
@@ -400,11 +409,10 @@ def drawBoardBorder(app):
 def drawPiece(app, piece):
     pieceImage = f'{app.levelChosen}/{app.levelChosen}_{piece.row}_{piece.col}.png'
     highlight = f'{app.levelChosen}/{app.levelChosen}_{piece.row}_{piece.col}_highlighted.png'
-    r = piece.width // 6
+    r = max(4, int(piece.width // 8))
     if app.draggingPiece!= None and app.pieceList[app.draggingPiece] == piece:
         drawImage(highlight, piece.x-r+5, piece.y-r+5, width = piece.width + r*2, height = piece.height + r*2, rotateAngle = piece.angle) #, opacity = 100)
     drawImage(pieceImage, piece.x-r, piece.y-r, width = piece.width + r*2, height = piece.height + r*2, rotateAngle = piece.angle)
-
 
 def win_onScreenStart(app):
     pass

@@ -33,7 +33,7 @@ def bakeKnobs(difficulty, rows, cols, edges):
             pieces[f'{row},{col}'] = img
             pieceW, pieceH = img.size
     
-    r = pieceW // 6
+    r = max(4, pieceW // 8)
     
     for row in range(rows):
         for col in range(cols):
@@ -87,7 +87,6 @@ def bakeKnobs(difficulty, rows, cols, edges):
 if __name__ == '__main__':
     bakeKnobs('easy', 5, 5, generateKnobPieces('easy', 5, 5))
     bakeKnobs('easy2', 5, 5, generateKnobPieces('easy2', 5, 5))
-    bakeKnobs('medium', 8, 8, generateKnobPieces('medium', 8, 8))
     bakeKnobs('medium2', 8, 8, generateKnobPieces('medium2', 8, 8))
     bakeKnobs('hard', 10, 10, generateKnobPieces('hard', 10, 10))
 
@@ -119,6 +118,5 @@ def bakeSilhouettes(difficulty, rows, cols):
 if __name__ == '__main__':
     bakeSilhouettes('easy', 5, 5)
     bakeSilhouettes('easy2', 5, 5)
-    bakeSilhouettes('medium', 8, 8)
     bakeSilhouettes('medium2', 8, 8)
     bakeSilhouettes('hard', 10, 10)
